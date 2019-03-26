@@ -45,6 +45,21 @@ describeWithDOM('mount', () => {
   });
 
   describe('top level wrapper', () => {
+    wrap()
+      .withGlobal('document', () => null)
+      .withGlobal('window', () => null)
+      .it('throws without a global document and window', () => {
+        expect(() => mount(<div />)).to.throw(
+          Error,
+          'It looks like you called `mount()` without a global document being loaded.',
+        );
+
+        expect(() => new ReactWrapper(<div />)).to.throw(
+          Error,
+          'It looks like you called `mount()` without a global document being loaded.',
+        );
+      });
+
     it('does what i expect', () => {
       class Box extends React.Component {
         render() {
@@ -861,10 +876,29 @@ describeWithDOM('mount', () => {
   });
 
   describe('.ref(refName)', () => {
+    class WithoutRef extends React.Component {
+      render() { return <div />; }
+    }
+
+    class WithRef extends React.Component {
+      render() { return <div ref="r" />; }
+    }
+
+    class RendersWithRef extends React.Component {
+      render() { return <WithRef />; }
+    }
+
+    it('throws when called on not the root', () => {
+      const wrapper = mount(<RendersWithRef />);
+      const found = wrapper.find(WithRef);
+      expect(found).to.have.lengthOf(1);
+      expect(() => found.ref('ref')).to.throw(
+        Error,
+        'ReactWrapper::ref(refname) can only be called on the root',
+      );
+    });
+
     it('unavailable ref should return undefined', () => {
-      class WithoutRef extends React.Component {
-        render() { return <div />; }
-      }
       const wrapper = mount(<WithoutRef />);
       const ref = wrapper.ref('not-a-ref');
 
@@ -872,7 +906,6 @@ describeWithDOM('mount', () => {
     });
 
     it('gets a wrapper of the node matching the provided refName', () => {
-
       class Foo extends React.Component {
         render() {
           return (
